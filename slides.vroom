@@ -1,0 +1,150 @@
+# This is a sample Vroom input file. It should help you get started.
+#
+# Edit this file with your content. Then run `vroom --vroom` to start
+# the show!
+#
+# See `perldoc Vroom::Vroom` for complete details.
+#
+---- config
+# Basic config options.
+title: Catalyst datagrids and you
+indent: 5
+height: 24
+width: 80
+skip: 0
+
+# The following options are for Gvim usage.
+vim: vim
+fuopt: maxhorz,maxvert
+guioptions: egmLtT
+guicursor: a:blinkon0-ver25-Cursor
+guifont: Bitstream_Vera_Sans_Mono:h28
+
+---- center
+
+Catalyst datagrids and you
+
+Nicholas Perez ( nperez )
+
+MPW2010
+
+----
+
+What's a datagrid?
+
++* Spreadsheet looking thing with columns and rows with the following requirements:
+    Sortable
+    Editable
+    Searchable
+    Magical
+
+----
+
+What's the oldschool way of doing it?
+
++* Typically tables are built using:
+    Template::Toolkit
+    jQuery (to manipulate the click events and the dom)
+    DBIC via Catalyst (to get at the database)
+
+----
+
+What's the new, awesomer way of doing it?
+
++* Catalyst::Controller::DBIC::API
+    Provides a clean, hassle free API to DBIx::Class
+    Can be REST or RPC
+    Easily customizable via Moose method modifiers and the like
+
+
++* ExtJS
+    GridPanel + Store + JsonReader + JsonWriter + HttpProxy == WIN
+        Can easily decouple the UI from the backend
+        Very little real transport level code needed for basic CRUD
+        Satisfies our datagrid requirements out of the box
+
+----
+
+So what features does DBIC::API bring to the table?
+
++* Handles onesies, twosies and bulk datasets
++* Flexible CGI::Expand + JSON syntax means most queries can be written by hand for non UI use
++* Validates as much as possible upfront without making a trip to the database
++* SAVES TIME
+
+----
+
+What about ExtJS?
+
++* Nice high level UI toolkit
++* Well thought out design that is similar to desktop UI
++* MAKES MY JOB EASIER
+
+---- 
+
+What's DBIC::API setup look like?
+
++* Very simple for basic, CRUD
+
+LET'S SEE HOW SIMPLE: (note to presenter, switch to code)
+
+----
+
+That was dumb easy.
+
++* Now, what about the ExtJS stuff. Is it scary?
+
+LET'S FIND OUT: (note to presenter, switch to code)
+
+----
+
+To help you visualize the Ext components and how they fit together, I drew you some ASCII boxes.
+
++<3
+
+----
+
+    ---------------------------------------------------------
+    |                  GridPanel                            |
+    | ----------------------------------  ----------------- |
+    | |        Store (RESTful)         |  |  RowEditor    | |
+    | | ----------  --------   ------- |  ----------------- |
+    | | | Writer |  |Reader|   |Proxy| |                    |
+    | | ----------  --------   ------- |                    |
+    | |                                |                    |
+    | ----------------------------------                    |
+    |                                                       |
+    ---------------------------------------------------------
+
+----
+
+What's notable about the ExtJS code?
+
++* Most of the logic deals with handling the UI
+    Communication is handled by the built in components
+    If custom communication is required, it is extremely simple to do
+    For more complex backend data, could be generated via TT
+
+
+----
+
+What's notable about the DBIC::API code?
+
++* Extremely short for the default CRUD cases
+    No need to write your own CRUD crap
+    Easily adaptable to other UI front ends
+
+
+----
+
+It should be noted that I am using all of these tools for REAL WORK
+
+
+----
+
+Questions? I've got answers!
+
+
+----
+
+THANKS

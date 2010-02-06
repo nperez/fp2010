@@ -1,0 +1,341 @@
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="[% c.uri_for('/static/js/ext/resources/css/ext-all.css') %]"></link>
+        <link rel="stylesheet" type="text/css" href="[% c.uri_for('/static/js/ext/examples/ux/css/RowEditor.css') %]"></link>
+        <script type="text/javascript" src="[% c.uri_for('/static/js/ext/adapter/ext/ext-base.js') %]"></script>
+        <script type="text/javascript" src="[% c.uri_for('/static/js/ext/ext-all-debug.js') %]"></script>
+        <script type="text/javascript" src="[% c.uri_for('/static/js/ext/examples/ux/RowEditor.js') %]"></script>
+
+        <script type="text/javascript">
+            Ext.onReady(function()
+            {
+                var proxy = new Ext.data.HttpProxy({url: '[% c.uri_for("/api/employee") %]'});
+                var reader = new Ext.data.JsonReader
+                (
+                    {
+                        idProperty: 'id',
+                        successProperty: 'success',
+                        root: 'data',
+                        fields:
+                        [
+                            { name: 'id' },
+                            { name: 'first_name', allowBlank: false },
+                            { name: 'last_name', allowBlank: false },
+                            { name: 'eid', allowBlank: false },
+                            { name: 'email', allowBlank: false },
+                        ]
+                    }
+                );
+                var writer = new Ext.data.JsonWriter({encode: false});
+                var datastore = new Ext.data.Store
+                (
+                    {
+                        id: 'datastore',
+                        restful: true,
+                        proxy: proxy,
+                        reader: reader,
+                        writer: writer,
+                    }
+                );
+                var editor = new Ext.ux.grid.RowEditor
+                (
+                    {
+                        id: 'row-editor',
+                        saveText: 'Update',
+                        clicksToEdit: 2,
+                        floating: {zindex: 7000}, // <-- this corrects the zindex issue when invoking modal dialogs when editing
+                        listeners:
+                        {
+                            beforeedit: function(row_editor)
+                            {
+                                if(!row_editor.initialized)
+                                {
+                                    row_editor.initFields();
+                                }
+                            },
+                            canceledit: function()
+                            {
+                                var rec = Ext.getCmp('datagrid').getSelectionModel().getSelected();
+                                if(rec.phantom)
+                                {
+                                    Ext.getCmp('datagrid').getStore().remove(rec);
+                                }
+                            }
+                        }
+                    }
+                );
+                var datagrid = new Ext.grid.GridPanel
+                (
+                    {
+                        renderTo: 'datagrid-target',
+                        id: 'datagrid',
+                        iconCls: 'icon-grid',
+                        title: 'All Employees',
+                        autoScroll: true,
+                        height: 500,
+                        width: 600,
+                        store: datastore,
+                        plugins: [editor],
+                        tbar:
+                        [
+                            {
+                                text: 'Search',
+                                handler: function() { Ext.getCmp('search-form').getForm().reset(); Ext.getCmp('search-window').show(); }
+                            },
+                            '-',
+                            {
+                                id: 'clear-search-button',
+                                text: 'Clear Search',
+                                disabled: true,
+                                handler: function()
+                                {
+                                    var options =
+                                    {
+                                        params : {},
+                                        callback : function(records, options, success)
+                                        {
+                                            Ext.Msg.hide();
+                                            Ext.WindowMgr.hideAll();
+                                            Ext.getCmp('clear-search-button').disable();
+                                        }
+                                    };
+
+                                    Ext.Msg.wait('Clearing search results', 'Clearing...');
+                                    Ext.getCmp('datagrid').getStore().load(options);
+                                }
+                            },
+                            '-',
+                            {
+                                text: 'Add',
+                                handler: function()
+                                {
+                                    var editor = Ext.getCmp('row-editor');
+
+                                    var rectype = Ext.getCmp('datagrid').getStore().recordType;
+                                    var u = new rectype
+                                    (
+                                        {
+                                            id: undefined,
+                                            first_name: '',
+                                            last_name: '',
+                                            eid: '',
+                                            email: ''
+                                        }
+                                    );
+                                    Ext.getCmp('datagrid').getStore().insert(0, u);
+                                    Ext.getCmp('datagrid').getSelectionModel().selectRow(0);
+                                    editor.startEditing(0);
+                                }
+                            },
+                            '-',
+                            {
+                                text: 'Delete',
+                                handler: function()
+                                {
+                                    var selections = Ext.getCmp('datagrid').getSelectionModel().getSelections();
+                                    Ext.Msg.show
+                                    (
+                                        {
+                                            title:'Are you sure?',
+                                            msg: 'Deleting the currently selected records. Is this okay?',
+                                            buttons: Ext.Msg.OKCANCEL,
+                                            fn: function(buttonId)
+                                            {
+                                                var rawdata = [];
+                                                for(var u = 0; u < selections.length; u++)
+                                                {
+                                                    rawdata[u] = selections[u].data;
+                                                }
+
+                                                if(buttonId == 'ok')
+                                                {
+                                                    Ext.Ajax.request
+                                                    (
+                                                        {
+                                                            url: '[% c.uri_for('/api/employee') %]',
+                                                            method: 'DELETE',
+                                                            success: function()
+                                                            {
+                                                                var grid = Ext.getCmp('datagrid');
+                                                                var str = grid.getStore();
+                                                                var gview = grid.getView();
+                                                                str.suspendEvents();
+                                                                str.remove(selections);
+                                                                str.resumeEvents();
+                                                                gview.refresh();
+                                                            },
+                                                            
+                                                            jsonData: { data: rawdata }
+                                                        }
+                                                    );
+                                                }
+                                            },
+                                            animEl: 'elId',
+                                            icon: Ext.MessageBox.WARNING
+                                        }
+                                    );
+                                }
+                            },
+                            '-',
+                            {
+                                text: 'Select All',
+                                handler: function() { Ext.getCmp('datagrid').getSelectionModel().selectAll(); }
+                            },
+                            '-',
+                            {
+                                text: 'Deselect All',
+                                handler: function() { Ext.getCmp('datagrid').getSelectionModel().clearSelections(false); }
+                            },
+                            '-',
+                        ],
+                        viewConfig: 
+                        {
+                            forceFit: true
+                        },
+                        sm: new Ext.grid.RowSelectionModel({singleSelect:false}),
+                        colModel: new Ext.grid.ColumnModel
+                        (
+                            {
+                                defaults: 
+                                {
+                                    width: 100,
+                                    sortable: true
+                                },
+                                columns: 
+                                [
+                                    {
+                                        header: 'ID',
+                                        editor: new Ext.form.DisplayField(),
+                                        dataIndex: 'id'
+                                    },
+                                    {
+                                        header: 'First',
+                                        editor: new Ext.form.TextField({allowBlank: false, invalidText: 'First name required'}),
+                                        dataIndex: 'first_name'
+                                    },
+                                    {
+                                        header: 'Last',
+                                        editor: new Ext.form.TextField({allowBlank: false, invalidText: 'Last name required'}),
+                                        dataIndex: 'last_name'
+                                    },
+                                    {
+                                        header: 'EID',
+                                        editor: new Ext.form.TextField({allowBlank: false, minLength: 8, vtype: 'alphanum'}),
+                                        dataIndex: 'eid'
+                                    },
+                                    {
+                                        header: 'E-Mail',
+                                        editor: new Ext.form.TextField({allowBlank: false, vtype: 'email'}),
+                                        dataIndex: 'email'
+                                    }
+                                ]
+                            }
+                        )
+                    }
+                );
+
+                var searchpanel = new Ext.Panel
+                (
+                    {
+                        id: 'search-panel',
+                        layout: 'vbox',
+                        layoutConfig:
+                        {
+                            align: 'stretch',
+                            pack: 'start'
+                        },
+                        items:
+                        [
+                            new Ext.FormPanel
+                            (
+                                {
+                                    id: 'search-form',
+                                    flex: 1,
+                                    autoScroll: 1,
+                                    defaultType:    'textfield',
+                                    items:
+                                    [
+                                        {
+                                            fieldLabel: 'First Name',
+                                            name: 'first_name'
+                                        },
+                                        {
+                                            fieldLabel: 'Last Name',
+                                            name: 'last_name'
+                                        },
+                                        {
+                                            fieldLabel: 'EID',
+                                            name: 'eid'
+                                        },
+                                        {
+                                            fieldLabel: 'E-Mail',
+                                            name: 'email'
+                                        }
+                                    ]
+                                }
+                            )
+                        ],
+                        buttons:
+                        [
+                            {
+                                text: 'Search',
+                                handler: function(button, e)
+                                {
+                                    var searchparams = {};
+
+                                    Ext.getCmp('search-form').getForm().items.each
+                                    (
+                                        function(item, index, length)
+                                        {
+                                            if(item.getValue().length > 0)
+                                            {
+                                                searchparams['search.' + item.getName() + '.LIKE'] = '%' + item.getValue() + '%';
+                                            }
+                                            return true;
+                                        }
+                                    );
+
+                                    var options =
+                                    {
+                                        params : searchparams,
+                                        callback : function(records, options, success)
+                                        {
+                                            Ext.Msg.hide();
+                                            Ext.WindowMgr.hideAll();
+                                            Ext.getCmp('clear-search-button').enable();
+                                        }
+                                    };
+
+                                    Ext.Msg.wait('Searching for employees', 'Searching...');
+                                    datastore.load(options);
+                                }
+                            }
+                        ]
+                    }
+                );
+                var searchwin = new Ext.Window
+                (
+                    {
+                        id: 'search-window',
+                        title: 'Search',
+                        width: 500,
+                        height: 300,
+                        layout: 'fit',
+                        plain:true,
+                        modal: true,
+                        bodyStyle:'padding:5px;',
+                        items: searchpanel,
+                        closeAction: 'hide',
+                    }
+                );
+
+                datastore.load();
+            });
+
+        </script>
+    </head>
+    <body>
+        <div id="datagrid-target"></div>
+    </body>
+</html>
+

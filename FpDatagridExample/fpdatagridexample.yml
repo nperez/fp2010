@@ -1,0 +1,17 @@
+---
+name: 'FpDatagridExample'
+
+View::TT:
+    INCLUDE_PATH:
+        - __path_to(root/templates)__
+    TEMPLATE_EXTENSION: '.tt'
+    DEBUG:  'parser'
+
+Model::ExampleDB:
+    schema_class: 'FpDatagridExample::Schema'
+    connect_info:
+        - dbi:SQLite:__path_to(db/employee.db)__
+        - ''
+        - ''
+        - { AutoCommit: 1 }
+
